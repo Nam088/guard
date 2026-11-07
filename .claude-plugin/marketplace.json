@@ -1,0 +1,18 @@
+{
+  "name": "claude",
+  "description": "Official Claude Code Security Guard Marketplace",
+  "owner": {
+    "name": "Nam088",
+    "url": "https://github.com/Nam088/guard"
+  },
+  "plugins": [
+    {
+      "name": "guard",
+      "description": "Enterprise Security Guard & Context Dashboard Mod for Claude Code",
+      "source": "./",
+      "version": "1.0.0",
+      "category": "security",
+      "tags": ["security", "guard", "telemetry", "context"]
+    }
+  ]
+}

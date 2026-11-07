@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "./src/ui/components",
+    "paths": {
+      "claude-code": ["./types/claude-code.d.ts"],
+      "claude-code/testing": ["./types/claude-code.d.ts"],
+      "@shared/*": ["./src/shared/*"],
+      "@core/*": ["./src/core/*"],
+      "@ui/*": ["./src/ui/*"]
+    },
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src/**/*",
+    "hooks/**/*",
+    "types/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
