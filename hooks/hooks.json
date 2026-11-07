@@ -1,0 +1,4 @@
+{
+  "description": "Enterprise Guard hooks registration",
+  "modules": ["./register.ts"]
+}

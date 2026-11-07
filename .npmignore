@@ -1,0 +1,9 @@
+tests/
+node_modules/
+.git/
+.gitignore
+.DS_Store
+*.log
+tsconfig.json
+package-lock.json
+CLAUDE_CODE_MOD_PLUGIN_GUIDE.md

@@ -1,0 +1,40 @@
+{
+  "name": "enterprise-guard",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Enterprise Security Guard & Context Dashboard Mod for Claude Code",
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "security",
+    "guard",
+    "telemetry",
+    "fail-closed"
+  ],
+  "files": [
+    ".claude-plugin",
+    "hooks",
+    "src",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "esbuild hooks/register.ts --bundle --format=esm --platform=neutral --external:claude-code --outfile=dist/register.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "claude plugin test ./",
+    "validate": "claude plugin validate ./ --strict",
+    "check": "npm run typecheck && npm run validate && npm run test && npm run build",
+    "release:pack": "npm pack",
+    "release:dry-run": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.319",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

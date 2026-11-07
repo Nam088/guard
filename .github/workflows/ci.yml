@@ -1,0 +1,47 @@
+name: CI Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Typecheck, Validate, and Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime (v22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.319
+
+      - name: Execute TypeScript Typecheck
+        run: npm run typecheck
+
+      - name: Execute Strict Plugin Validation
+        run: npm run validate
+
+      - name: Execute Full Test Suite
+        run: npm run test
+
+      - name: Verify Flattened Bundle Build
+        run: npm run build

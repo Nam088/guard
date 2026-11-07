@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "enterprise-guard",
+  "version": "1.0.0",
+  "description": "Enterprise Security Guard & Context Dashboard Mod for Claude Code.",
+  "author": {
+    "name": "Platform Engineering Team",
+    "email": "platform@company.internal"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "strict_mode": {
+      "type": "boolean",
+      "title": "Strict Security Enforcement",
+      "description": "Reject destructive bash commands and sensitive file inspection without confirmation.",
+      "default": true
+    }
+  }
+}
