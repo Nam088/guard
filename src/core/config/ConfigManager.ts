@@ -8,7 +8,12 @@
  * Pure in-process implementation complying strictly with engine sandbox constraints (zero node:fs imports).
  */
 
-import { CONFIG_FILES, UI_IDENTIFIERS } from '../../shared/constants.js'
+import {
+  CLAUDE_CONFIG_FILES,
+  CONFIG_FILES,
+  DEFAULT_NATIVE_ATTRIBUTION,
+  UI_IDENTIFIERS
+} from '../../shared/constants.js'
 
 /**
  * Shape of the user-definable Enterprise Guard configuration.
@@ -18,6 +23,7 @@ export interface GuardUserConfig {
   readonly enable_git_scan: boolean
   readonly enable_usage_bar: boolean
   readonly enable_rate_limits: boolean
+  readonly auto_init_attribution: boolean
   readonly max_stored_violations: number
   readonly allowed_patterns: readonly string[]
   readonly allowed_commands: readonly string[]
@@ -33,6 +39,7 @@ export const DEFAULT_GUARD_CONFIG: GuardUserConfig = {
   enable_git_scan: true,
   enable_usage_bar: true,
   enable_rate_limits: true,
+  auto_init_attribution: true,
   max_stored_violations: UI_IDENTIFIERS.MAX_STORED_VIOLATIONS,
   allowed_patterns: [],
   allowed_commands: [],
@@ -46,8 +53,10 @@ export const DEFAULT_GUARD_CONFIG: GuardUserConfig = {
 export interface ConfigEngineContext {
   fs?: {
     read: (path: string) => Promise<string>
+    write?: (path: string, text: string) => Promise<void>
     exists: (path: string) => Promise<boolean>
   }
+  userHome?: string
   env?: {
     get: (name: string) => Promise<string | undefined>
   }
@@ -106,6 +115,9 @@ export class GuardConfigManager {
     if (typeof parsed.enable_rate_limits === 'boolean') {
       result.enable_rate_limits = parsed.enable_rate_limits
     }
+    if (typeof parsed.auto_init_attribution === 'boolean') {
+      result.auto_init_attribution = parsed.auto_init_attribution
+    }
     if (typeof parsed.max_stored_violations === 'number' && parsed.max_stored_violations > 0) {
       result.max_stored_violations = parsed.max_stored_violations
     }
@@ -158,6 +170,7 @@ export class GuardConfigManager {
       enable_git_scan: overlay.enable_git_scan ?? base.enable_git_scan,
       enable_usage_bar: overlay.enable_usage_bar ?? base.enable_usage_bar,
       enable_rate_limits: overlay.enable_rate_limits ?? base.enable_rate_limits,
+      auto_init_attribution: overlay.auto_init_attribution ?? base.auto_init_attribution,
       max_stored_violations: overlay.max_stored_violations ?? base.max_stored_violations,
       notification_mode: overlay.notification_mode ?? base.notification_mode,
       allowed_patterns: [
@@ -209,9 +222,9 @@ export class GuardConfigManager {
 
     if (engine?.fs) {
       // 1. User Global Configuration: ~/.guardrc.json
-      if (engine.env) {
+      if (engine.userHome || engine.env) {
         try {
-          const home = await engine.env.get('HOME').catch(() => undefined)
+          const home = engine.userHome || (await engine.env?.get('HOME').catch(() => undefined))
           if (home) {
             const userRcPath = `${home}/${CONFIG_FILES.USER_RC}`
             const exists = await engine.fs.exists(userRcPath).catch(() => false)
@@ -270,6 +283,7 @@ export class GuardConfigManager {
       enable_git_scan: true,
       enable_usage_bar: true,
       enable_rate_limits: true,
+      auto_init_attribution: true,
       max_stored_violations: 100,
       notification_mode: 'toast',
       allowed_patterns: [
@@ -300,6 +314,80 @@ export class GuardConfigManager {
       ]
     }
     return JSON.stringify(template, null, 2) + '\n'
+  }
+
+  /**
+   * Ensures Claude Code native settings (.claude/settings.json) have attribution suppression configured:
+   * "attribution": { "commit": "", "pr": "", "sessionUrl": false }
+   * Preserves all other user-configured settings (e.g. enabledPlugins, permissions).
+   *
+   * @param {ConfigEngineContext} [engine] - Sandbox engine interface providing fs and env.
+   * @returns {Promise<boolean>} Whether any settings file was created or updated.
+   */
+  public async ensureNativeAttribution(engine?: ConfigEngineContext): Promise<boolean> {
+    if (!engine?.fs || !engine.fs.write) {
+      return false
+    }
+
+    let modified = false
+    const targets: string[] = [CLAUDE_CONFIG_FILES.WORKSPACE_SETTINGS]
+
+    if (engine.userHome || engine.env) {
+      try {
+        const home = engine.userHome || (await engine.env?.get('HOME').catch(() => undefined))
+        if (home) {
+          const userGlobalPath = `${home}/${CLAUDE_CONFIG_FILES.USER_SETTINGS}`
+          const userExists = await engine.fs.exists(userGlobalPath).catch(() => false)
+          if (userExists) {
+            targets.push(userGlobalPath)
+          }
+        }
+      } catch {
+        // Fail-open
+      }
+    }
+
+    for (const targetPath of targets) {
+      try {
+        const exists = await engine.fs.exists(targetPath).catch(() => false)
+        let currentSettings: Record<string, any> = {}
+
+        if (exists) {
+          const raw = await engine.fs.read(targetPath).catch(() => '')
+          if (raw.trim()) {
+            try {
+              currentSettings = JSON.parse(raw)
+            } catch {
+              currentSettings = {}
+            }
+          }
+        }
+
+        const attr = currentSettings.attribution
+        const isConfigured =
+          typeof attr === 'object' &&
+          attr !== null &&
+          attr.commit === '' &&
+          attr.pr === '' &&
+          attr.sessionUrl === false
+
+        if (!isConfigured) {
+          const updatedSettings = {
+            ...currentSettings,
+            attribution: {
+              ...(typeof attr === 'object' && attr !== null ? attr : {}),
+              ...DEFAULT_NATIVE_ATTRIBUTION
+            }
+          }
+          await engine.fs.write(targetPath, JSON.stringify(updatedSettings, null, 2) + '\n')
+          modified = true
+        }
+      } catch {
+        // Fail-open: do not crash plugin lifecycle on file write error
+      }
+    }
+
+    return modified
   }
 }
 

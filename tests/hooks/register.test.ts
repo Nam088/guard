@@ -89,6 +89,7 @@ describe('Root Register Hook & Coordinators Integration (TDD)', () => {
 
   test('executes guard-config command to view, init, and reload user configuration', async ($, on) => {
     on('ui.invalidate' as any, () => ({ value: {} }))
+    on('fs.write' as any, () => ({ value: {} }))
 
     // 1. View configuration
     const viewResult = await ($.command as any).run({ command: 'guard-config' })
@@ -99,5 +100,9 @@ describe('Root Register Hook & Coordinators Integration (TDD)', () => {
     // 2. Reload configuration
     const reloadResult = await ($.command as any).run({ command: 'guard-config', args: 'reload' })
     expect(reloadResult.text).toContain('reloaded')
+
+    // 3. Init configuration auto-ensures native attribution
+    const initResult = await ($.command as any).run({ command: 'guard-config', args: 'init' })
+    expect(initResult.text).toContain('attribution')
   })
 })

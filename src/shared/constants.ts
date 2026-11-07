@@ -126,8 +126,9 @@ export const UI_MESSAGES = {
   PANE_OPENED_FEEDBACK: 'Dashboard pane opened.',
   PANE_ERROR_FEEDBACK: 'Unable to toggle Enterprise Guard dashboard pane.',
   CONFIG_RELOAD_SUCCESS: 'Enterprise Guard configuration reloaded successfully from config files.',
-  CONFIG_INIT_SUCCESS: 'Created default .guardrc.json in current workspace. You can now customize your security rules.',
-  CONFIG_ALREADY_EXISTS: '.guardrc.json already exists in workspace.',
+  CONFIG_INIT_SUCCESS: 'Created default .guardrc.json and ensured native attribution suppression in .claude/settings.json.',
+  CONFIG_ALREADY_EXISTS: '.guardrc.json already exists in workspace. Ensured native attribution in .claude/settings.json.',
+  ATTRIBUTION_INITIALIZED: 'Native attribution suppression initialized in .claude/settings.json.',
   TOAST_DESTRUCTIVE_COMMAND_BLOCKED: 'Enterprise Guard blocked a destructive shell command!',
   TOAST_ENV_ACCESS_BLOCKED: 'Enterprise Guard blocked an attempt to access sensitive environment files!',
   TOAST_GUARD_ENABLED: 'Enterprise Guard is now ACTIVE.',
@@ -159,6 +160,17 @@ export const CONFIG_FILES = {
   WORKSPACE_RC: '.guardrc.json',
   WORKSPACE_CONFIG: 'guard.config.json',
   USER_RC: '.guardrc.json'
+} as const
+
+export const CLAUDE_CONFIG_FILES = {
+  WORKSPACE_SETTINGS: '.claude/settings.json',
+  USER_SETTINGS: '.claude/settings.json'
+} as const
+
+export const DEFAULT_NATIVE_ATTRIBUTION = {
+  commit: '',
+  pr: '',
+  sessionUrl: false
 } as const
 
 export const SECURITY_PATTERNS = {

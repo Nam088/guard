@@ -106,6 +106,22 @@ export function register(on: On, options: PluginOptions): void {
       name: 'guard-scan',
       description: UI_IDENTIFIERS.COMMAND_GUARD_SCAN_DESC
     })
+
+    // 1d. Auto-initialize Claude Code native attribution suppression in .claude/settings.json
+    const activeConfig = sharedConfigManager.getConfig()
+    if (activeConfig.auto_init_attribution) {
+      await sharedConfigManager
+        .ensureNativeAttribution({
+          fs: {
+            read: (path) => $.fs.read(path),
+            write: (path, text) => $.fs.write(path, text),
+            exists: (path) => $.fs.exists(path)
+          },
+          userHome: home
+        })
+        .catch(() => false)
+    }
+
     return next(e)
   })
 
@@ -146,17 +162,35 @@ export function register(on: On, options: PluginOptions): void {
     const rawArgs = (e.args || '').trim().toLowerCase()
 
     if (rawArgs === 'init') {
+      let createdGuardRc = false
       const exists = await $.fs.exists(CONFIG_FILES.WORKSPACE_RC).catch(() => false)
-      if (exists) {
-        return { text: UI_MESSAGES.CONFIG_ALREADY_EXISTS }
+      if (!exists) {
+        await $.fs.write(CONFIG_FILES.WORKSPACE_RC, sharedConfigManager.generateTemplateConfig())
+        const rawWs = await $.fs.read(CONFIG_FILES.WORKSPACE_RC).catch(() => '')
+        if (rawWs) {
+          sharedConfigManager.load(rawWs)
+        }
+        createdGuardRc = true
       }
-      await $.fs.write(CONFIG_FILES.WORKSPACE_RC, sharedConfigManager.generateTemplateConfig())
-      const rawWs = await $.fs.read(CONFIG_FILES.WORKSPACE_RC).catch(() => '')
-      if (rawWs) {
-        sharedConfigManager.load(rawWs)
-      }
+
+      const home = await $.env.get('HOME').catch(() => undefined)
+      await sharedConfigManager
+        .ensureNativeAttribution({
+          fs: {
+            read: (path) => $.fs.read(path),
+            write: (path, text) => $.fs.write(path, text),
+            exists: (path) => $.fs.exists(path)
+          },
+          userHome: home
+        })
+        .catch(() => false)
+
       $.ui.invalidate('ui.render')
-      return { text: UI_MESSAGES.CONFIG_INIT_SUCCESS }
+      return {
+        text: createdGuardRc
+          ? UI_MESSAGES.CONFIG_INIT_SUCCESS
+          : UI_MESSAGES.CONFIG_ALREADY_EXISTS
+      }
     }
 
     if (rawArgs === 'reload') {
@@ -191,6 +225,7 @@ export function register(on: On, options: PluginOptions): void {
         `- Git Diff & Commit Scan: ${active.enable_git_scan}\n` +
         `- Usage Context Bar: ${active.enable_usage_bar}\n` +
         `- Rate Limit Meters: ${active.enable_rate_limits}\n` +
+        `- Auto Native Attribution: ${active.auto_init_attribution}\n` +
         `- Notification Mode: ${active.notification_mode}\n` +
         `- Protected Branches: [${active.protected_branches.join(', ')}]\n\n` +
         `Custom Whitelists:\n` +
@@ -201,7 +236,7 @@ export function register(on: On, options: PluginOptions): void {
         `- Blocked Commands: [${active.custom_blocked_commands.join(', ') || 'none'}]\n` +
         `- Secret Patterns: [${active.custom_secret_patterns.join(', ') || 'none'}]\n\n` +
         `Subcommands:\n` +
-        `- /guard-config init   : Generate .guardrc.json in workspace\n` +
+        `- /guard-config init   : Initialize .guardrc.json and .claude/settings.json attribution\n` +
         `- /guard-config reload : Reload configuration from disk\n`
     }
   }).catch(() => {

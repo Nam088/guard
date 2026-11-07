@@ -116,4 +116,101 @@ describe('GuardConfigManager (TDD)', () => {
     expect(resolved.protected_branches).toContain('prod-global') // from global
     expect(resolved.custom_blocked_files).toContain('repo-secret.txt') // from repo
   })
+
+  test('auto_init_attribution is true by default and can be overridden', () => {
+    const manager = new GuardConfigManager()
+    expect(manager.getConfig().auto_init_attribution).toBe(true)
+
+    const updated = manager.load({ auto_init_attribution: false })
+    expect(updated.auto_init_attribution).toBe(false)
+  })
+
+  test('ensureNativeAttribution creates .claude/settings.json when absent', async () => {
+    const mockFiles: Record<string, string> = {}
+
+    const mockEngine = {
+      fs: {
+        read: async (path: string) => mockFiles[path] || '',
+        write: async (path: string, text: string) => {
+          mockFiles[path] = text
+        },
+        exists: async (path: string) => Boolean(mockFiles[path])
+      }
+    }
+
+    const manager = new GuardConfigManager()
+    const changed = await manager.ensureNativeAttribution(mockEngine)
+
+    expect(changed).toBe(true)
+    expect(mockFiles['.claude/settings.json']).toBeDefined()
+    const parsed = JSON.parse(mockFiles['.claude/settings.json'] || '{}')
+    expect(parsed.attribution).toEqual({
+      commit: '',
+      pr: '',
+      sessionUrl: false
+    })
+  })
+
+  test('ensureNativeAttribution preserves existing settings in .claude/settings.json', async () => {
+    const mockFiles: Record<string, string> = {
+      '.claude/settings.json': JSON.stringify({
+        enabledPlugins: { 'guard@claude': true },
+        permissions: { allow: ['Bash'] }
+      })
+    }
+
+    const mockEngine = {
+      fs: {
+        read: async (path: string) => mockFiles[path] || '',
+        write: async (path: string, text: string) => {
+          mockFiles[path] = text
+        },
+        exists: async (path: string) => Boolean(mockFiles[path])
+      }
+    }
+
+    const manager = new GuardConfigManager()
+    const changed = await manager.ensureNativeAttribution(mockEngine)
+
+    expect(changed).toBe(true)
+    const parsed = JSON.parse(mockFiles['.claude/settings.json'] || '{}')
+    expect(parsed.enabledPlugins).toEqual({ 'guard@claude': true })
+    expect(parsed.permissions).toEqual({ allow: ['Bash'] })
+    expect(parsed.attribution).toEqual({
+      commit: '',
+      pr: '',
+      sessionUrl: false
+    })
+  })
+
+  test('ensureNativeAttribution is a no-op when attribution is already configured', async () => {
+    const mockFiles: Record<string, string> = {
+      '.claude/settings.json': JSON.stringify({
+        enabledPlugins: { 'guard@claude': true },
+        attribution: {
+          commit: '',
+          pr: '',
+          sessionUrl: false
+        }
+      })
+    }
+
+    let writeCount = 0
+    const mockEngine = {
+      fs: {
+        read: async (path: string) => mockFiles[path] || '',
+        write: async (path: string, text: string) => {
+          writeCount++
+          mockFiles[path] = text
+        },
+        exists: async (path: string) => Boolean(mockFiles[path])
+      }
+    }
+
+    const manager = new GuardConfigManager()
+    const changed = await manager.ensureNativeAttribution(mockEngine)
+
+    expect(changed).toBe(false)
+    expect(writeCount).toBe(0)
+  })
 })

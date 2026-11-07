@@ -136,6 +136,7 @@ Guard enforces four defense-in-depth security layers on every tool call before e
 | **Staged Secret Commits** | `git add .env`, `git add id_rsa` | Inspects arguments of `git add` to prevent secret files from entering the staging index. | Command blocked before git index mutation. |
 | **Diff Content Token Exposure** | Staged secrets in `git commit` / diff | Deep regex scanning for AWS keys, GitHub PATs, Anthropic/OpenAI keys, Stripe tokens, and generic credentials. | Commit command denied; leaked line highlighted. |
 | **Protected Branch Destruction** | `git push -f origin main` | Parses `git push` target branches and flags (`--force`, `+ref`, `:delete`). Protects `main` and `master`. | Push blocked before network transmission. |
+| **Attribution & Identity Leak** | `Co-Authored-By: Claude`, PR link, session URL | Dual-layer suppression: auto-initializes Claude Code native engine settings (`.claude/settings.json`) and hooks `attribution.text` to empty string. | All git commits and pull request descriptions remain 100% clean and unbranded. |
 
 ---
 
@@ -147,7 +148,7 @@ Guard registers four native slash commands inside Claude Code:
 | :--- | :--- | :--- |
 | `/guard-panel` | `/guard-panel` | Toggles the docked Security & Context Dashboard pane (`enterprise-guard-monitor-pane`). |
 | `/guard-toggle` | `/guard-toggle` | Hot-toggles active protection between `ACTIVE` (fail-closed enforcement) and `PAUSED` (audit pass-through mode). |
-| `/guard-config` | `/guard-config`<br>`/guard-config init`<br>`/guard-config reload` | **Default**: Displays current effective configuration and whitelists.<br>**`init`**: Generates a starter `.guardrc.json` in the workspace.<br>**`reload`**: Hot-reloads configuration files from disk without restarting Claude Code. |
+| `/guard-config` | `/guard-config`<br>`/guard-config init`<br>`/guard-config reload` | **Default**: Displays current effective configuration and whitelists.<br>**`init`**: Generates a starter `.guardrc.json` and initializes `.claude/settings.json` native attribution suppression.<br>**`reload`**: Hot-reloads configuration files from disk without restarting Claude Code. |
 | `/guard-scan` | `/guard-scan` | Manually triggers an in-memory security scan of staged git diffs and commit messages for leaked credentials. |
 
 ---
@@ -259,6 +260,7 @@ Generate a starter configuration file in your workspace:
 | `enable_git_scan` | `boolean` | `true` | Scans staged git diffs and protects against force-pushes to sensitive branches. |
 | `enable_usage_bar` | `boolean` | `true` | Controls rendering of the telemetry bar in the `AbovePrompt` slot. |
 | `enable_rate_limits`| `boolean` | `true` | Displays live API rate limits and reset countdown timers. |
+| `auto_init_attribution` | `boolean` | `true` | Automatically initializes `.claude/settings.json` native attribution suppression (`commit: ""`, `pr: ""`, `sessionUrl: false`). |
 | `notification_mode` | `"toast" \| "silent" \| "modal"` | `"toast"` | Notification mechanism for blocked security actions. |
 | `protected_branches`| `string[]` | `["main", "master"]` | List of branches guarded against force-push (`git push -f`) and remote deletion. |
 | `allowed_patterns` | `string[]` | `[".env.example", ...]` | Explicit file whitelist to bypass sensitive file access checks. |
