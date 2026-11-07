@@ -10,9 +10,14 @@
       "name": "guard",
       "description": "Enterprise Security Guard & Context Dashboard Mod for Claude Code",
       "source": "./",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "category": "security",
-      "tags": ["security", "guard", "telemetry", "context"]
+      "tags": [
+        "security",
+        "guard",
+        "telemetry",
+        "context"
+      ]
     }
   ]
 }
